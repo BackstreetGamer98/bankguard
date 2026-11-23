@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BankGuard Console</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --ink: #14233c; --ink-soft: #4a5a72; --blue: #1f4e89; --blue-dark: #173d6b;
+    --mist: #edf1f5; --paper: #fff; --line: #d5dce5; --brass: #a57f2c; --brass-tint: #faf3e2;
+    --green: #1e7a5a; --green-tint: #e8f5ef; --amber: #9a5a00; --amber-tint: #fff4e0; --red: #b3261e; --red-tint: #fdeceb;
+    --serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { margin: 0; background: var(--mist); color: var(--ink); font: 15px/1.55 var(--sans); display: flex; flex-direction: column; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid #7aa7e0; outline-offset: 2px; }
+
+  header { background: var(--ink); color: #fff; border-bottom: 3px solid var(--brass); display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 58px; flex: none; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .wordmark { font: 600 21px/1 var(--serif); }
+  .divider { width: 1px; height: 22px; background: #ffffff40; }
+  .product { font-size: 14px; color: #c9d4e6; }
+  .spacer { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #dbe5f5; border: 1px solid #ffffff30; border-radius: 999px; padding: 4px 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #e8b04a; }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 330px minmax(0, 1fr) 500px; grid-template-rows: minmax(0, 1fr); }
+  .pane { min-height: 0; overflow-y: auto; }
+
+  /* left */
+  .left { background: var(--paper); border-right: 1px solid var(--line); padding: 18px 18px 28px; }
+  .left h2, .right h2, .mid h1 { font: 600 17px/1.25 var(--serif); margin: 0 0 4px; }
+  .hint { margin: 0 0 12px; font-size: 13px; color: var(--ink-soft); }
+  .scenario { display: block; width: 100%; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; cursor: pointer; }
+  .scenario:hover { border-color: var(--blue); }
+  .scenario b { display: block; font-weight: 600; }
+  .scenario span { font-size: 13px; color: var(--ink-soft); }
+  .build { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 3px; }
+  input, select { width: 100%; border: 1px solid #aeb9c9; border-radius: 6px; padding: 8px 10px; background: #fff; }
+  .go { margin-top: 14px; width: 100%; background: var(--blue); color: #fff; border: 0; border-radius: 8px; height: 44px; font-weight: 600; cursor: pointer; }
+  .go:hover { background: var(--blue-dark); }
+  details.rules { margin-top: 20px; font-size: 13.5px; }
+  details.rules summary { cursor: pointer; font-weight: 600; }
+  details.rules dl { margin: 8px 0 0; display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; }
+  details.rules dt { color: var(--ink-soft); }
+  details.rules dd { margin: 0; overflow-wrap: anywhere; }
+
+  /* middle */
+  .mid { padding: 24px 28px 32px; }
+  .mid-inner { max-width: 760px; margin: 0 auto; }
+  .welcome h1 { font: 600 30px/1.2 var(--serif); margin: 8px 0; }
+  .welcome p { color: var(--ink-soft); max-width: 56ch; margin: 0 0 10px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; border-top: 4px solid var(--green); margin-bottom: 16px; overflow: hidden; }
+  .card.ask { border-top-color: var(--amber); }
+  .card.deny { border-top-color: var(--red); }
+  .card-head { padding: 12px 16px 0; display: flex; gap: 12px; align-items: center; }
+  .badge { font-weight: 600; font-size: 13px; border-radius: 999px; padding: 2px 10px; color: var(--green); background: var(--green-tint); }
+  .ask .badge { color: var(--amber); background: var(--amber-tint); }
+  .deny .badge { color: var(--red); background: var(--red-tint); }
+  .when { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
+  .action { margin: 8px 16px 2px; font-size: 16px; font-weight: 600; }
+  .via { margin: 0 16px 8px; font-size: 13px; color: var(--ink-soft); }
+  .via.untrusted { color: var(--red); font-weight: 600; }
+  .why { margin: 0 16px 10px; }
+  .rule-name { font-family: var(--mono); font-size: 12.5px; background: var(--mist); border-radius: 4px; padding: 1px 6px; }
+  .outcome { margin: 0; padding: 10px 16px; font-size: 14px; background: #f9fafc; border-top: 1px solid var(--line); }
+  .objections { margin: 0; padding: 8px 16px 10px; background: #f9fafc; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .objections summary { cursor: pointer; color: var(--ink-soft); }
+  .objections ul { margin: 6px 0 0; padding-left: 18px; }
+  .decide { display: flex; gap: 10px; padding: 12px 16px; background: var(--amber-tint); border-top: 1px solid var(--line); align-items: center; }
+  .decide span { font-size: 14px; margin-right: auto; }
+  .btn { border-radius: 6px; padding: 7px 16px; font-weight: 600; cursor: pointer; border: 1px solid var(--blue); background: var(--paper); color: var(--blue); }
+  .btn.yes { background: var(--blue); color: #fff; }
+  .btn.no { border-color: var(--red); color: var(--red); }
+  .btn:hover { filter: brightness(.95); }
+
+  /* right */
+  .right { background: var(--mist); border-left: 1px solid var(--line); padding: 18px; overflow-x: hidden; }
+  .integrity { border-radius: 8px; padding: 10px 14px; font-weight: 600; margin: 8px 0 12px; border: 1px solid; }
+  .integrity.ok { color: var(--green); background: var(--green-tint); border-color: #b9dccd; }
+  .integrity.bad { color: var(--red); background: var(--red-tint); border-color: #f0bcb8; }
+  .integrity small { display: block; font-weight: 400; color: var(--ink-soft); margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid #e8ecf1; vertical-align: top; }
+  th { background: #f4f7fa; font-weight: 600; }
+  td.hash { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+  .d-allow { color: var(--green); font-weight: 600; }
+  .d-require_approval { color: var(--amber); font-weight: 600; }
+  .d-deny { color: var(--red); font-weight: 600; }
+  tr.broken td { background: var(--red-tint); }
+  .edit { background: none; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; padding: 1px 6px; cursor: pointer; color: var(--ink-soft); }
+  .edit:hover { border-color: var(--red); color: var(--red); }
+  .note { font-size: 13px; color: var(--ink-soft); margin: 10px 0; }
+  .reset { margin-top: 6px; background: none; border: 0; color: var(--blue); text-decoration: underline; cursor: pointer; padding: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin: 8px 0 10px; }
+  .tile { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .tile b { display: block; font: 600 20px/1.2 var(--serif); }
+  .tile span { font-size: 12.5px; color: var(--ink-soft); }
+  .bars { display: grid; gap: 4px; font-size: 13px; }
+  .bar { display: grid; grid-template-columns: 130px 1fr 26px; gap: 8px; align-items: center; }
+  .bar i { display: block; height: 8px; border-radius: 4px; background: var(--blue); min-width: 2px; }
+  .bar em { font-style: normal; text-align: right; color: var(--ink-soft); }
+  .empty { background: var(--paper); border: 1px dashed #aeb9c9; border-radius: 8px; padding: 16px; color: var(--ink-soft); }
+
+  @media (max-width: 1180px) { main { grid-template-columns: 320px minmax(0, 1fr); } .right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); } main { grid-template-rows: none; overflow-y: auto; } .pane { overflow: visible; } }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } .product, .divider { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+      <rect width="30" height="30" rx="6" fill="#1f4e89"/>
+      <path d="M5 11c3-3 5-3 7.500 0s5 3 7.500 0 3-2 5-1" fill="none" stroke="#d9b45c" stroke-width="2" stroke-linecap="round"/>
+      <path d="M5 17c3-3 5-3 7.500 0s5 3 7.500 0 3-2 5-1" fill="none" stroke="#d9b45c" stroke-width="2" stroke-linecap="round"/>
+      <path d="M5 23c3-3 5-3 7.500 0s5 3 7.500 0 3-2 5-1" fill="none" stroke="#d9b45c" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span class="wordmark">BANK</span><span class="divider"></span><span class="product">BankGuard Console</span>
+  </div>
+  <span class="spacer"></span>
+  <span class="pill"><span class="dot"></span>Simulation: no real money or data moves</span>
+</header>
+
+<main>
+  <section class="pane left" aria-label="Propose an action">
+    <h2>Pretend to be the AI agent</h2>
+    <p class="hint">Click a scenario, or build your own below. BankGuard decides before anything runs.</p>
+    <div id="scenarios"></div>
+    <form class="build" id="form">
+      <h2>Build your own action</h2>
+      <label for="tool">What does the agent want to do?</label>
+      <select id="tool"></select>
+      <div id="fields"></div>
+      <label for="source">Who asked for it?</label>
+      <select id="source">
+        <option value="user">The user, directly</option>
+        <option value="untrusted">Text inside an email, PDF or web page</option>
+      </select>
+      <button class="go" type="submit">Check this action</button>
+    </form>
+    <details class="rules"><summary>Rules in force</summary><dl id="rules"></dl></details>
+  </section>
+
+  <section class="pane mid" aria-label="Decisions"><div class="mid-inner" id="feed" aria-live="polite"></div></section>
+
+  <aside class="pane right" aria-label="Statistics and audit log">
+    <h2>Statistics</h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="bars" id="byrule"></div>
+    <h2 style="margin-top:20px">Audit log</h2>
+    <div class="integrity ok" id="integrity">Chain intact</div>
+    <div id="log"></div>
+    <p class="note">Each entry stores a fingerprint of the one before it. Edit any entry and the chain breaks at that point.</p>
+    <button class="reset" id="reset" type="button">Clear this session</button>
+    <a class="reset" href="/api/export" download="bankguard-audit.jsonl" style="margin-left:14px">Download the log</a>
+  </aside>
+</main>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v != null) el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return el;
+}
+const post = async (url, body) => {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+};
+const inr = n => Number(n).toLocaleString("en-IN");
+
+const SCENARIOS = [
+  ["Small payment", "INR 5,000 to Acme Supplies", "create_payment", { amount: 5000, payee: "Acme Supplies" }],
+  ["Payment above the auto limit", "INR 50,000 to Acme Supplies", "create_payment", { amount: 50000, payee: "Acme Supplies" }],
+  ["Payment above the hard limit", "INR 2,50,000 to Acme Supplies", "create_payment", { amount: 250000, payee: "Acme Supplies" }],
+  ["Close a customer account", "Always needs a human", "close_account", { customer_id: "C1001" }],
+  ["Export customer data", "Always needs a human", "export_data", { customer_id: "C1001" }],
+  ["Email to an outside address", "someone@gmail.com", "send_email", { recipient: "someone@gmail.com", body: "Your statement is ready" }],
+  ["Email containing a raw PAN", "Inside the bank, but with personal data", "send_email", { recipient: "ops@examplebank.com", body: "PAN is ABCDE1234F" }],
+  ["Look-alike website", "api.internal.examplebank.com.evil.io", "http_request", { url: "https://api.internal.examplebank.com.evil.io/steal" }],
+  ["A tool the agent should never have", "delete_database", "delete_database", { name: "customers" }],
+  ["Poisoned email asks for a payment", "INR 900, text came from an email", "create_payment", { amount: 900, payee: "Unknown Ltd" }, "untrusted"],
+  ["Many small payments add up", "23 payments of INR 9,500, one after another", "burst", { amount: 9500, payee: "Acme Supplies" }],
+];
+const FIELDS = {
+  create_payment: [["amount", "Amount in INR", "number"], ["payee", "Payee", "text"]],
+  send_email: [["recipient", "Recipient", "text"], ["body", "Message", "text"]],
+  post_message: [["channel", "Channel", "text"], ["text", "Message", "text"]],
+  http_request: [["url", "Web address", "text"]],
+  close_account: [["customer_id", "Customer ID", "text"]],
+  export_data: [["customer_id", "Customer ID", "text"]],
+  lookup_customer: [["customer_id", "Customer ID", "text"]],
+  delete_database: [["name", "Database name", "text"]],
+};
+const TOOL_LABEL = {
+  create_payment: "Create a payment", send_email: "Send an email", post_message: "Post a chat message", http_request: "Fetch a web page",
+  close_account: "Close an account", export_data: "Export customer data", lookup_customer: "Look up a customer", delete_database: "Delete a database (not on the allowed list)",
+};
+const DECISION = {
+  allow: ["Allowed", ""], require_approval: ["Needs a human", "ask"], deny: ["Denied", "deny"],
+};
+const DECISION_WORD = { allow: "Allowed", require_approval: "Needs a human", deny: "Denied" };
+
+function summary(tool, args) {
+  const parts = Object.entries(args).map(([k, v]) => k === "amount" ? "INR " + inr(v) : String(v));
+  return TOOL_LABEL[tool] ? TOOL_LABEL[tool].replace(" (not on the allowed list)", "") + (parts.length ? ": " + parts.join(", ") : "") : tool;
+}
+
+/* ---------- feed ---------- */
+function renderWelcome() {
+  $("#feed").replaceChildren(h("div", { class: "welcome" },
+    h("h1", {}, "Every action passes through BankGuard first"),
+    h("p", {}, "An AI agent can pay, email and export data. BankGuard is plain code that sits between the agent and those tools and decides: allow it, ask a human, or deny it. No AI is used to decide."),
+    h("p", {}, "Pick a scenario on the left to see a decision appear here.")));
+}
+function card(r) {
+  const [label, cls] = DECISION[r.decision];
+  const el = h("div", { class: "card " + cls, "data-id": r.pending_id || "" });
+  const outcome = h("p", { class: "outcome" });
+  const setOutcome = (text, ok) => { outcome.replaceChildren(h("strong", {}, ok == null ? "" : ok ? "Ran: " : "Did not run: "), text); };
+  setOutcome(r.message, r.outcome === "executed" ? true : r.outcome === "pending" ? null : false);
+  const head = h("div", { class: "card-head" }, h("span", { class: "badge" }, label), h("span", { class: "when" }, new Date().toLocaleTimeString("en-GB")));
+  el.append(head,
+    h("p", { class: "action" }, summary(r.tool, r.args)),
+    h("p", { class: "via" + (r.source === "untrusted" ? " untrusted" : "") }, r.source === "untrusted" ? "Requested by text inside an email, PDF or web page" : "Requested by the user"),
+    h("p", { class: "why" }, r.reason + ". ", h("span", { class: "rule-name" }, r.rule)));
+  if (r.objections.length > 1) {
+    el.append(h("details", { class: "objections" }, h("summary", {}, r.objections.length + " rules objected. The most restrictive one decided."),
+      h("ul", {}, r.objections.map(o => h("li", {}, h("span", { class: "rule-name" }, o.rule), " " + DECISION_WORD[o.decision] + ": " + o.reason)))));
+  }
+  if (r.outcome === "pending") {
+    const bar = h("div", { class: "decide" }, h("span", {}, "A human has to decide. Nothing runs until they do."));
+    const act = approve => async () => {
+      bar.querySelectorAll("button").forEach(b => b.disabled = true);
+      try {
+        const d = await post("/api/decide", { id: r.pending_id, approve });
+        bar.remove();
+        head.querySelector(".badge").textContent = approve ? "Approved by manager" : "Rejected by manager";
+        el.className = "card " + (approve ? "" : "deny");
+        setOutcome(d.message, approve);
+        refreshAudit();
+      } catch (e) { bar.querySelector("span").textContent = e.message; }
+    };
+    bar.append(h("button", { class: "btn no", type: "button", onclick: act(false) }, "Reject"), h("button", { class: "btn yes", type: "button", onclick: act(true) }, "Approve"));
+    el.append(outcome, bar);
+  } else el.append(outcome);
+  return el;
+}
+async function runBurst(args) {
+  const feed = $("#feed");
+  if (feed.querySelector(".welcome")) feed.replaceChildren();
+  let allowed = 0, stopped = null;
+  try {
+    for (let i = 0; i < 23 && !stopped; i++) {
+      const r = await post("/api/propose", { tool: "create_payment", args, source: "user" });
+      if (r.decision === "allow") allowed++; else stopped = r;
+    }
+  } catch (e) { alert(e.message); }
+  feed.prepend(h("div", { class: "card ask" },
+    h("div", { class: "card-head" }, h("span", { class: "badge" }, "Budget check")),
+    h("p", { class: "action" }, allowed + " small payments of INR " + inr(args.amount) + " were each allowed on their own"),
+    h("p", { class: "why" }, stopped ? "Added to everything proposed earlier today, they used up the daily budget. The next one was stopped by the daily spend limit, even though it is small." : "The daily limit was not reached.")));
+  if (stopped) feed.prepend(card(stopped));
+  $(".mid").scrollTop = 0;
+  refreshAudit();
+}
+async function propose(tool, args, source) {
+  if (tool === "burst") return runBurst(args);
+  try {
+    const r = await post("/api/propose", { tool, args, source: source || "user" });
+    const feed = $("#feed");
+    if (feed.querySelector(".welcome")) feed.replaceChildren();
+    feed.prepend(card(r));
+    $(".mid").scrollTop = 0;
+    refreshAudit();
+  } catch (e) { alert(e.message); }
+}
+
+/* ---------- audit ---------- */
+function tile(big, label) { return h("div", { class: "tile" }, h("b", {}, big), h("span", {}, label)); }
+async function refreshStats() {
+  const s = await (await fetch("/api/stats")).json();
+  $("#tiles").replaceChildren(
+    tile(String(s.proposed), "Actions proposed"),
+    tile(s.decisions.allow + " / " + s.decisions.require_approval + " / " + s.decisions.deny, "Allowed / needs human / denied"),
+    tile(s.human.approved + " / " + s.human.rejected, "Humans approved / rejected"),
+    tile(s.decision_ms.p50 + " ms", "Median decision time"));
+  const rules = Object.entries(s.by_rule);
+  const max = Math.max(1, ...rules.map(r => r[1]));
+  $("#byrule").replaceChildren(...(rules.length ? rules.map(([r, n]) => h("div", { class: "bar" }, h("span", {}, r), h("i", { style: "width:" + n / max * 100 + "%" }), h("em", {}, String(n)))) : [h("div", { class: "note", style: "margin:0" }, "Rules that stop or pause an action are counted here.")]));
+}
+async function refreshAudit() {
+  refreshStats().catch(() => {});
+  const d = await (await fetch("/api/audit")).json();
+  const box = $("#integrity");
+  if (d.broken_at == null) { box.className = "integrity ok"; box.replaceChildren("Chain intact", h("small", {}, d.entries.length + " entries, every fingerprint matches")); }
+  else { box.className = "integrity bad"; box.replaceChildren("Chain broken at entry " + (d.broken_at + 1), h("small", {}, "That entry was changed after it was written")); }
+  const log = $("#log");
+  if (!d.entries.length) return log.replaceChildren(h("div", { class: "empty" }, "No decisions yet. Every action you check is recorded here."));
+  log.replaceChildren(h("table", {}, h("thead", {}, h("tr", {}, ["#", "Action", "Decision", "Rule", "Fingerprint", ""].map(t => h("th", {}, t)))),
+    h("tbody", {}, d.entries.slice().reverse().map(e => h("tr", { class: e.index === d.broken_at ? "broken" : "" },
+      h("td", {}, String(e.index + 1)), h("td", {}, e.tool), h("td", { class: "d-" + e.decision }, DECISION_WORD[e.decision] || e.decision),
+      h("td", {}, e.rule), h("td", { class: "hash" }, e.hash.slice(0, 6)),
+      h("td", {}, h("button", { class: "edit", type: "button", title: "Change this entry to show the tamper check", onclick: async () => { await post("/api/tamper", { index: e.index }); refreshAudit(); } }, "Edit")))))));
+}
+
+/* ---------- left side ---------- */
+function buildFields() {
+  const tool = $("#tool").value;
+  $("#fields").replaceChildren(...FIELDS[tool].flatMap(([key, label, type]) => [
+    h("label", { for: "f-" + key }, label), h("input", { id: "f-" + key, name: key, type, step: type === "number" ? "any" : null, autocomplete: "off" })]));
+}
+async function loadConfig() {
+  const c = await (await fetch("/api/config")).json();
+  $("#rules").replaceChildren(
+    h("dt", {}, "Runs alone"), h("dd", {}, "Payments up to INR " + inr(c.auto_limit)),
+    h("dt", {}, "Needs a human"), h("dd", {}, "Payments up to INR " + inr(c.approval_limit) + "; " + c.approval_tools.join(", ") + "; emails to outside addresses"),
+    h("dt", {}, "Denied"), h("dd", {}, "Payments above INR " + inr(c.approval_limit) + "; tools not on the list; raw personal data going out; hosts not on the list"),
+    h("dt", {}, "Own domain"), h("dd", {}, c.internal_domains.join(", ")),
+    h("dt", {}, "Allowed hosts"), h("dd", {}, c.allowed_hosts.join(", ")),
+    h("dt", {}, "Daily spend"), h("dd", {}, "INR " + inr(c.daily_spend_limit) + " per agent per day, however small each payment is"),
+    h("dt", {}, "Rate limit"), h("dd", {}, c.rate));
+}
+$("#scenarios").replaceChildren(...SCENARIOS.map(([title, desc, tool, args, source]) =>
+  h("button", { class: "scenario", type: "button", onclick: () => propose(tool, args, source) }, h("b", {}, title), h("span", {}, desc))));
+$("#tool").replaceChildren(...Object.keys(FIELDS).map(t => h("option", { value: t }, TOOL_LABEL[t])));
+$("#tool").addEventListener("change", buildFields);
+$("#form").addEventListener("submit", e => {
+  e.preventDefault();
+  const args = {};
+  FIELDS[$("#tool").value].forEach(([key, , type]) => {
+    const v = $("#f-" + key).value.trim();
+    if (v !== "") args[key] = type === "number" ? Number(v) : v;
+  });
+  propose($("#tool").value, args, $("#source").value);
+});
+$("#reset").addEventListener("click", async () => { await post("/api/reset"); renderWelcome(); refreshAudit(); });
+buildFields(); loadConfig(); renderWelcome(); refreshAudit();
+</script>
+</body>
+</html>
